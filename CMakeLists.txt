@@ -33,6 +33,7 @@ include_directories("/usr/include/libusb-1.0/")
 add_executable(freenect-green-screen
     src/main.cpp
     src/MyFreenectDevice.cpp
+    src/utils.cpp
 )
 
 target_link_libraries(freenect-green-screen

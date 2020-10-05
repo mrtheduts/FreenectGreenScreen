@@ -1,25 +1,16 @@
+#ifndef MY_FREENECT_DEVICE_HPP
+#define MY_FREENECT_DEVICE_HPP
+#include <condition_variable>
 #include <libfreenect/libfreenect.hpp>
 #include <mutex>
 #include <opencv2/opencv.hpp>
 
+#define WIDTH 640
+#define HEIGHT 480
+
 class MyFreenectDevice : public Freenect::FreenectDevice {
  public:
-  MyFreenectDevice(freenect_context* _ctx, int _index)
-      : Freenect::FreenectDevice(_ctx, _index),
-        m_buffer_depth(FREENECT_DEPTH_11BIT),
-        m_buffer_rgb(FREENECT_VIDEO_RGB),
-        m_gamma(2048),
-        depthMat(cv::Size(640, 480), CV_16UC1),
-        rgbMat(cv::Size(640, 480), CV_8UC3, cv::Scalar(0)),
-        ownMat(cv::Size(640, 480), CV_8UC3, cv::Scalar(0)),
-        m_new_rgb_frame(false),
-        m_new_depth_frame(false) {
-    for (unsigned int i = 0; i < 2048; i++) {
-      float v = i / 2048.0;
-      v = std::pow(v, 3) * 6;
-      m_gamma[i] = v * 6 * 256;
-    }
-  }
+  MyFreenectDevice(freenect_context* _ctx, int _index);
 
   // Do not call them directly even in child
   void VideoCallback(void* _rgb, uint32_t timestamp);
@@ -27,6 +18,9 @@ class MyFreenectDevice : public Freenect::FreenectDevice {
 
   bool getVideo(cv::Mat& output);
   bool getDepth(cv::Mat& output);
+
+  std::condition_variable cond_var;
+  std::mutex new_rgb_frame_mutex;
 
  private:
   std::vector<uint8_t> m_buffer_depth;
@@ -43,3 +37,5 @@ class MyFreenectDevice : public Freenect::FreenectDevice {
   bool m_new_rgb_frame;
   bool m_new_depth_frame;
 };
+
+#endif
