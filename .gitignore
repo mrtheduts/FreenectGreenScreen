@@ -1,4 +1,6 @@
-build/
 .clangd/
+.vim/
+
+build/
 
 compile_commands.json

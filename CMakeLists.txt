@@ -1,5 +1,5 @@
 #####################################################################
-# Powderpunk_Server Project
+# Freenect Green Screen Project
 #####################################################################
 cmake_minimum_required(VERSION 3.17)
 
@@ -22,16 +22,17 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Search Packages
 find_package(OpenCV COMPONENTS core imgproc highgui REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
 find_package(Threads REQUIRED)
 find_package(libfreenect REQUIRED)
 
 # Necessary for libfreenect
 include_directories("/usr/include/libusb-1.0/")
-include_directories(${OpenCV_INCLUDE_DIRS})
 
 # Generate binary
 add_executable(freenect-green-screen
     src/main.cpp
+    src/MyFreenectDevice.cpp
 )
 
 target_link_libraries(freenect-green-screen
@@ -39,3 +40,5 @@ target_link_libraries(freenect-green-screen
     ${CMAKE_THREAD_LIBS_INIT}
     ${FREENECT_LIBRARIES}
 )
+
+target_compile_options(freenect-green-screen PRIVATE -Werror -Wall -Wextra)
