@@ -38,7 +38,7 @@ void MyFreenectDevice::DepthCallback(void* _depth, uint32_t /*timestamp*/) {
   m_new_depth_frame = true;
 
   m_depth_mutex.unlock();
-  cond_var.notify_all();
+  cond_var.notify_one();
 }
 
 bool MyFreenectDevice::getVideo(cv::Mat& output) {

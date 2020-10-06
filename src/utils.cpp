@@ -21,18 +21,19 @@ int OpenV4l2loop(const char* dev_video, size_t vid_send_size, int width,
   int t;
 
   v.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
-  t = ioctl(v4l2lo_fd, VIDIOC_G_FMT, &v);
 
+  t = ioctl(v4l2lo_fd, VIDIOC_G_FMT, &v);
   if (t < 0) {
     exit(t);
   }
 
   v.fmt.pix.width = width;
   v.fmt.pix.height = height;
-  v.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB24;
+  v.fmt.pix.pixelformat = V4L2_PIX_FMT_YUV420;
   v.fmt.pix.sizeimage = vid_send_size;
-  t = ioctl(v4l2lo_fd, VIDIOC_S_FMT, &v);
+  v.fmt.pix.field = V4L2_FIELD_NONE; 
 
+  t = ioctl(v4l2lo_fd, VIDIOC_S_FMT, &v);
   if (t < 0) {
     exit(t);
   }

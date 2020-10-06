@@ -3,6 +3,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstdio>
+#include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
 
 #include "MyFreenectDevice.hpp"
@@ -17,20 +18,24 @@ int main(int argc, char* const* args) {
   int starting_degree = 0;
   bool showCV(false);
   bool verbose(false);
+  int threshold = 1000;
 
   {
     int opt = 0;
     opterr = 0;
 
-    while ((opt = getopt(argc, args, ":d:iwvh")) != -1) {
+    while ((opt = getopt(argc, args, ":d:t:iwvh")) != -1) {
       switch (opt) {
         case 'd':
           std::sscanf(optarg, "%d", &starting_degree);
-          if(starting_degree < -30 || starting_degree > 30) {
+          if (starting_degree < -30 || starting_degree > 30) {
             std::cerr << "Tilt degree allowed only between -30 and 30. Using ";
             starting_degree = (starting_degree < 0 ? -30 : 30);
             std::cerr << starting_degree << "." << std::endl;
           }
+          break;
+        case 't':
+          std::sscanf(optarg, "%d", &threshold);
           break;
         case 'i':
           std::cerr << "Background image not yet implemented.";
@@ -52,48 +57,101 @@ int main(int argc, char* const* args) {
     }
   }
 
-  if(optind == argc) {
+  if (optind == argc) {
     std::cerr << "Number of arguments wrong." << std::endl;
     PrintHelp(args[0]);
     exit(-1);
   }
   const char* dev_video = args[optind];
-  size_t vid_send_size = WIDTH * HEIGHT * 3;
+  // size_t vid_send_size = WIDTH * HEIGHT * 3;
+  size_t vid_send_size = 640 * 720;
 
   if (verbose) std::cout << "Opening v4l2loop device..." << std::endl;
-
   int v4l2lo_fd = OpenV4l2loop(dev_video, vid_send_size, WIDTH, HEIGHT);
 
+  if (verbose) std::cout << "Creating matrices..." << std::endl;
   cv::Mat depthMat(cv::Size(WIDTH, HEIGHT), CV_16UC1);
   cv::Mat depthf(cv::Size(WIDTH, HEIGHT), CV_8UC1);
   cv::Mat ownMat(cv::Size(WIDTH, HEIGHT), CV_8UC3, cv::Scalar(0));
   cv::Mat rgbMat;
 
+  if (verbose) std::cout << "Opening device..." << std::endl;
   Freenect::Freenect freenect;
   MyFreenectDevice& device = freenect.createDevice<MyFreenectDevice>(0);
 
+  if (verbose)
+    std::cout << "Tilting " << starting_degree << " degrees..." << std::endl;
   device.setTiltDegrees(starting_degree);
 
+  if (verbose) std::cout << "Setting depth detection to MM..." << std::endl;
+  device.setDepthFormat(FREENECT_DEPTH_REGISTERED);
+
+  if (verbose) std::cout << "Starting RGB video..." << std::endl;
+  device.startVideo();
+
+  if (verbose) std::cout << "Starting depth video..." << std::endl;
+  device.startDepth();
+
   if (showCV) {
+    if (verbose) std::cout << "Starting OpenCV window..." << std::endl;
     namedWindow("rgb", cv::WINDOW_AUTOSIZE);
     // namedWindow("depth", cv::WINDOW_AUTOSIZE);
   }
 
-  device.startVideo();
-  device.startDepth();
-
   bool die(false);
   std::unique_lock<std::mutex> rgb_lck(device.new_rgb_frame_mutex);
+  std::unique_lock<std::mutex> dep_lck(device.new_dep_frame_mutex);
 
+  cv::Mat frame = cv::Mat::zeros(HEIGHT, WIDTH, CV_8UC1);
+  frame(cv::Rect(30, 40, 565, 440)) = 255;
+
+  // cv::Mat d_blur(cv::Size(WIDTH, HEIGHT), CV_16UC1);
+  cv::Mat mask(cv::Size(WIDTH, HEIGHT), CV_8UC1);
+  cv::Mat final_img(cv::Size(WIDTH, HEIGHT), CV_8UC3);
+  int erosion_size = 10;
+  cv::Mat element = cv::getStructuringElement(
+      0, cv::Size(2 * erosion_size + 1, 2 * erosion_size + 1),
+      cv::Point(erosion_size, erosion_size));
+
+  if (verbose) std::cout << "Entering main loop..." << std::endl;
   while (!die) {
     device.cond_var.wait(rgb_lck);
     device.getVideo(rgbMat);
-    // device.getDepth(depthMat);
+
+    device.cond_var.wait(dep_lck);
+    device.getDepth(depthMat);
+
+    // cv::threshold(depthMat, depthMat, 0, FREENECT_DEPTH_MM_MAX_VALUE,
+                  // cv::THRESH_BINARY + cv::THRESH_OTSU);
+    cv::GaussianBlur(depthMat, depthMat, cv::Size(3, 3), 0);
+    depthMat.setTo(FREENECT_DEPTH_MM_MAX_VALUE, depthMat >= threshold);
+    depthMat.setTo(0, depthMat < threshold);
+    cv::dilate(depthMat, depthMat, element);
+    depthMat.convertTo(mask, CV_8UC1, 255.0 / FREENECT_DEPTH_MM_MAX_VALUE);
+    // cv::resize(mask, mask_resized, cv::Size(565, 440), 0.5,1,
+    // cv::INTER_AREA); mask(cv::Rect(30,40,565,440)) = mask_resized;
+    mask = ~mask;
+    mask = mask & frame;
+    cv::cvtColor(mask, mask, cv::COLOR_GRAY2RGB);
+    final_img = rgbMat & mask;
+
+    // std::cout << "d_blur size: " << d_blur.size << d_blur.channels() <<
+    // std::endl; std::cout << "d_blur size: " << d_blur.size <<
+    // d_blur.channels() << std::endl; std::cout << "d_blur size: " <<
+    // d_blur.size << std::endl; d_not= ~d_not; cv::bitwise_not(d_not, d_not);
+    // d_not.convertTo(mask, CV_8UC3);
+    // mask = ~mask;
+    // cv::cvtColor(d_not, mask, cv::COLOR_GRAY2RGB);
+    // std::cout << "d_not size: " << d_not.size << std::endl;
+    // std::cout << "rgbMat size: " << rgbMat.size << std::endl;
+
+    // cv::bitwise_and(rgbMat, mask, final_img);
 
     if (showCV) {
-      cv::imshow("rgb", rgbMat);
+      cv::imshow("rgb", final_img);
+      // cv::imshow("rgb", mask);
       // depthMat.convertTo(depthf, CV_8UC1, 255.0 / 2048.0);
-      // cv::imshow("depth", depthf);
+      // cv::imshow("depth", mask);
 
       char k = cv::waitKey(5);
       if (k == 27) {
@@ -102,11 +160,12 @@ int main(int argc, char* const* args) {
       }
     }
 
-    int written = write(v4l2lo_fd, rgbMat.data, vid_send_size);
+    cv::cvtColor(final_img, final_img, cv::COLOR_RGB2YUV_I420);
+    int written = write(v4l2lo_fd, final_img.data, vid_send_size);
     if (written < 0) {
-      std::cout << "Error writing v4l2l device";
-      close(v4l2lo_fd);
-      return 1;
+    std::cout << "Error writing v4l2l device";
+    close(v4l2lo_fd);
+    return 1;
     }
   }
 
