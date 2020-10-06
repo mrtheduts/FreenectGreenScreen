@@ -16,15 +16,17 @@ int main(int argc, char* const* args) {
   }
 
   int starting_degree = 0;
+  int threshold = 1000;
+  bool useBG(false);
+  char const* bg_path = NULL;
   bool showCV(false);
   bool verbose(false);
-  int threshold = 1000;
 
   {
     int opt = 0;
     opterr = 0;
 
-    while ((opt = getopt(argc, args, ":d:t:iwvh")) != -1) {
+    while ((opt = getopt(argc, args, ":d:t:i:wvh")) != -1) {
       switch (opt) {
         case 'd':
           std::sscanf(optarg, "%d", &starting_degree);
@@ -38,7 +40,9 @@ int main(int argc, char* const* args) {
           std::sscanf(optarg, "%d", &threshold);
           break;
         case 'i':
-          std::cerr << "Background image not yet implemented.";
+          useBG = true;
+          bg_path = optarg;
+          std::cout << bg_path << std::endl;
           break;
         case 'w':
           showCV = true;
@@ -105,6 +109,14 @@ int main(int argc, char* const* args) {
   cv::Mat frame = cv::Mat::zeros(HEIGHT, WIDTH, CV_8UC1);
   frame(cv::Rect(30, 40, 565, 440)) = 255;
 
+  cv::Mat bg;
+  if(useBG){
+    bg = cv::imread(bg_path);
+    cv::cvtColor(bg, bg, cv::COLOR_BGR2RGB);
+    cv::resize(bg, bg, cv::Size(WIDTH, HEIGHT));
+  }
+  cv::Mat mask_bg;
+
   // cv::Mat d_blur(cv::Size(WIDTH, HEIGHT), CV_16UC1);
   cv::Mat mask(cv::Size(WIDTH, HEIGHT), CV_8UC1);
   cv::Mat final_img(cv::Size(WIDTH, HEIGHT), CV_8UC3);
@@ -122,7 +134,7 @@ int main(int argc, char* const* args) {
     device.getDepth(depthMat);
 
     // cv::threshold(depthMat, depthMat, 0, FREENECT_DEPTH_MM_MAX_VALUE,
-                  // cv::THRESH_BINARY + cv::THRESH_OTSU);
+    // cv::THRESH_BINARY + cv::THRESH_OTSU);
     cv::GaussianBlur(depthMat, depthMat, cv::Size(3, 3), 0);
     depthMat.setTo(FREENECT_DEPTH_MM_MAX_VALUE, depthMat >= threshold);
     depthMat.setTo(0, depthMat < threshold);
@@ -130,10 +142,18 @@ int main(int argc, char* const* args) {
     depthMat.convertTo(mask, CV_8UC1, 255.0 / FREENECT_DEPTH_MM_MAX_VALUE);
     // cv::resize(mask, mask_resized, cv::Size(565, 440), 0.5,1,
     // cv::INTER_AREA); mask(cv::Rect(30,40,565,440)) = mask_resized;
+    if(useBG){
+      mask_bg = mask.clone();
+      cv::cvtColor(mask_bg, mask_bg, cv::COLOR_GRAY2RGB);
+      mask_bg = bg & mask_bg;
+    }
     mask = ~mask;
     mask = mask & frame;
     cv::cvtColor(mask, mask, cv::COLOR_GRAY2RGB);
     final_img = rgbMat & mask;
+
+    if(useBG)
+      final_img = final_img | mask_bg;
 
     // std::cout << "d_blur size: " << d_blur.size << d_blur.channels() <<
     // std::endl; std::cout << "d_blur size: " << d_blur.size <<
@@ -163,9 +183,9 @@ int main(int argc, char* const* args) {
     cv::cvtColor(final_img, final_img, cv::COLOR_RGB2YUV_I420);
     int written = write(v4l2lo_fd, final_img.data, vid_send_size);
     if (written < 0) {
-    std::cout << "Error writing v4l2l device";
-    close(v4l2lo_fd);
-    return 1;
+      std::cout << "Error writing v4l2l device";
+      close(v4l2lo_fd);
+      return 1;
     }
   }
 
