@@ -8,7 +8,8 @@ Freenect Green Screen is a utility to use your Kinect device's (Gen1) depth sens
 
 ### Current and planned features
 - [X] **Virtual webcam:** create a virtual device seen as a webcam by your OS with the Kinect's VGA image;
-- [ ] **Green Screen:** replace your background with an image;
+- [X] **Green Screen:** replace your background with an image;
+    - [X] **Blurred Background:** blur your background instead of a image;
 - [ ] **Facial recognition:** to keep user's face always in frame, when possible;
 - [ ] **Runtime controls:** adjust Kinect's angle, background image and turn on/off facial recognition while it's running;
 - [ ] **Improved Green Screen:** replace your background with a video/gif;

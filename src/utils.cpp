@@ -8,6 +8,19 @@
 #include <cstring>
 #include <iostream>
 
+void PrintHelp(char* const path) {
+  std::cout << "Usage: " << path << " [options] /dev/video<N>" << std::endl;
+  std::cout << "Where <N> is the v4l2loopback device number." << std::endl;
+  std::cout << "options:" << std::endl;
+  std::cout << "\t-d starting degree (from -30 to 30)" << std::endl;
+  std::cout << "\t-t threshold distance to start recognize background (in mm)"
+            << std::endl;
+  std::cout << "\t-i <path/to/image> path to background image" << std::endl;
+  std::cout << "\t-w show OpenCV window to show current image" << std::endl;
+  std::cout << "\t-v verbose" << std::endl;
+  std::cout << "\t-h shows this help" << std::endl;
+}
+
 int OpenV4l2loop(const char* dev_video, size_t vid_send_size, int width,
                  int height) {
   int v4l2lo_fd = open(dev_video, O_WRONLY);
@@ -31,7 +44,7 @@ int OpenV4l2loop(const char* dev_video, size_t vid_send_size, int width,
   v.fmt.pix.height = height;
   v.fmt.pix.pixelformat = V4L2_PIX_FMT_YUV420;
   v.fmt.pix.sizeimage = vid_send_size;
-  v.fmt.pix.field = V4L2_FIELD_NONE; 
+  v.fmt.pix.field = V4L2_FIELD_NONE;
 
   t = ioctl(v4l2lo_fd, VIDIOC_S_FMT, &v);
   if (t < 0) {
@@ -41,13 +54,18 @@ int OpenV4l2loop(const char* dev_video, size_t vid_send_size, int width,
   return v4l2lo_fd;
 }
 
-void PrintHelp(char* const path) {
-  std::cout << "Usage: " << path << " [options] /dev/video<N>"  << std::endl;
-  std::cout << "Where <N> is the v4l2loopback device number." << std::endl;
-  std::cout << "options:" << std::endl;
-  std::cout << "\t-d starting degree (from -30 to 30)" << std::endl;
-  std::cout << "\t-i <path/to/image> path to background image" << std::endl;
-  std::cout << "\t-w show OpenCV window to show current image" << std::endl;
-  std::cout << "\t-v verbose" << std::endl;
-  std::cout << "\t-h shows this help" << std::endl;
+void InitialSetup(CmdLineOpts& opts, MyFreenectDevice& device) {
+  if (opts.verbose)
+    std::cout << "Tilting " << opts.starting_angle << " degrees..."
+              << std::endl;
+  device.setTiltDegrees(opts.starting_angle);
+
+  if (opts.verbose) std::cout << "Setting depth detection to MM..." << std::endl;
+  device.setDepthFormat(FREENECT_DEPTH_REGISTERED);
+
+  if (opts.verbose) std::cout << "Starting RGB video capture..." << std::endl;
+  device.startVideo();
+
+  if (opts.verbose) std::cout << "Starting depth video capture..." << std::endl;
+  device.startDepth();
 }
