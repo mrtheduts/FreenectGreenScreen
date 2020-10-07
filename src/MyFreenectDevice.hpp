@@ -21,6 +21,7 @@ class MyFreenectDevice : public Freenect::FreenectDevice {
 
   std::condition_variable cond_var;
   std::mutex new_rgb_frame_mutex;
+  std::mutex new_dep_frame_mutex;
 
  private:
   std::vector<uint8_t> m_buffer_depth;

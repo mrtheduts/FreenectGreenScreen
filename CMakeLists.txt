@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.17)
 
 # Project Name
 project(
-    FreenectGreenScreen VERSION 0.1.0
+    FreenectGreenScreen VERSION 0.2.0
     DESCRIPTION "Green screen for your kinect!"
     LANGUAGES CXX
 )
@@ -32,6 +32,7 @@ include_directories("/usr/include/libusb-1.0/")
 # Generate binary
 add_executable(freenect-green-screen
     src/main.cpp
+    src/CmdLineOpts.cpp
     src/MyFreenectDevice.cpp
     src/utils.cpp
 )

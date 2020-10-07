@@ -24,6 +24,7 @@ void MyFreenectDevice::VideoCallback(void* _rgb, uint32_t /*timestamp*/) {
 
   uint8_t* rgb = static_cast<uint8_t*>(_rgb);
   rgbMat.data = rgb;
+  cv::cvtColor(rgbMat, rgbMat, cv::COLOR_RGB2BGR);
   m_new_rgb_frame = true;
 
   m_rgb_mutex.unlock();
@@ -38,7 +39,7 @@ void MyFreenectDevice::DepthCallback(void* _depth, uint32_t /*timestamp*/) {
   m_new_depth_frame = true;
 
   m_depth_mutex.unlock();
-  cond_var.notify_all();
+  cond_var.notify_one();
 }
 
 bool MyFreenectDevice::getVideo(cv::Mat& output) {
