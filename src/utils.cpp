@@ -12,13 +12,21 @@ void PrintHelp(char* const path) {
   std::cout << "Usage: " << path << " [options] /dev/video<N>" << std::endl;
   std::cout << "Where <N> is the v4l2loopback device number." << std::endl;
   std::cout << "options:" << std::endl;
-  std::cout << "\t-d starting degree (from -30 to 30)" << std::endl;
-  std::cout << "\t-t threshold distance to start recognize background (in mm)"
+  std::cout << "\t-d <angle>\t\tset the starting angle from -30 to 30 degrees "
+               "(default: 0)"
             << std::endl;
-  std::cout << "\t-i <path/to/image> path to background image" << std::endl;
-  std::cout << "\t-w show OpenCV window to show current image" << std::endl;
-  std::cout << "\t-v verbose" << std::endl;
-  std::cout << "\t-h shows this help" << std::endl;
+  std::cout << "\t-t <threshold distance>\tset distance in mm to consider img "
+               "as background (default: 1000)"
+            << std::endl;
+  std::cout << "\t-i <path/to/image>\tset a background image" << std::endl;
+  std::cout << "\t-b <blur intensity>\tblur background with provided intensity "
+               "(must be an odd natural number)"
+            << std::endl;
+  std::cout
+      << "\t-w \t\t\topens a window to show video provided to virtual webcam"
+      << std::endl;
+  std::cout << "\t-v \t\t\tverbose" << std::endl;
+  std::cout << "\t-h \t\t\tshows this help" << std::endl;
 }
 
 int OpenV4l2loop(const char* dev_video, size_t vid_send_size, int width,
@@ -60,7 +68,8 @@ void InitialSetup(CmdLineOpts& opts, MyFreenectDevice& device) {
               << std::endl;
   device.setTiltDegrees(opts.starting_angle);
 
-  if (opts.verbose) std::cout << "Setting depth detection to MM..." << std::endl;
+  if (opts.verbose)
+    std::cout << "Setting depth detection to MM..." << std::endl;
   device.setDepthFormat(FREENECT_DEPTH_REGISTERED);
 
   if (opts.verbose) std::cout << "Starting RGB video capture..." << std::endl;
