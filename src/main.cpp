@@ -94,22 +94,20 @@ int main(int argc, char* const* args) {
   }
 
   if (optind == argc) {
-    std::cerr << "Number of arguments wrong." << std::endl;
+    std::cerr << "Wrong number of arguments." << std::endl;
     PrintHelp(args[0]);
     exit(-1);
   }
 
   const char* dev_video = args[optind];
-  // size_t vid_send_size = WIDTH * HEIGHT * 3;
+  // TODO: understand why this number
   size_t vid_send_size = 640 * 720;
 
   if (opts.verbose) std::cout << "Opening v4l2loop device..." << std::endl;
   int v4l2lo_fd = OpenV4l2loop(dev_video, vid_send_size, WIDTH, HEIGHT);
 
-  // TODO: Do I nedd really all these matrices?
   if (opts.verbose) std::cout << "Creating matrices..." << std::endl;
   cv::Mat depth_img(cv::Size(WIDTH, HEIGHT), CV_16UC1);
-  // cv::Mat ownMat(cv::Size(WIDTH, HEIGHT), CV_8UC3, cv::Scalar(0));
   cv::Mat rgb_img(cv::Size(WIDTH, HEIGHT), CV_8UC3);
 
   if (opts.verbose) std::cout << "Opening device..." << std::endl;
@@ -148,9 +146,6 @@ int main(int argc, char* const* args) {
     if (opts.verbose)
       std::cout << "Setting background image matrix..." << std::endl;
     bg_img = cv::imread(opts.bg_path);
-    // TODO: Convert to RGB is really needed? Maybe we can convert directly from
-    // BGR to YUV
-    // cv::cvtColor(bg_img, bg_img, cv::COLOR_BGR2RGB);
     // TODO: Make a better image fitting algorithm
     cv::resize(bg_img, bg_img, cv::Size(WIDTH, HEIGHT));
   }
@@ -186,7 +181,7 @@ int main(int argc, char* const* args) {
 
       // Fix curved edges
       mask = mask | frame;
-      
+
       // Dilate to eliminate gaps in background and decrease the border around
       // the foreground object/person
       cv::dilate(mask, mask, element);

@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.17)
 
 # Project Name
 project(
-    FreenectGreenScreen VERSION 0.2.0
+    FreenectGreenScreen VERSION 0.2.1
     DESCRIPTION "Green screen for your kinect!"
     LANGUAGES CXX
 )
