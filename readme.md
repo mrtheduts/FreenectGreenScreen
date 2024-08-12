@@ -1,5 +1,5 @@
 # Freenect Green Screen
-**Status:** In development :smile:
+**Status:** Archived
 
 ## About
 Freenect Green Screen is a utility to use your Kinect device's (Gen1) depth sensors capabilities to only show the image of the person in front of it, simulating a green screen effect behind them. It captures the image with the Kinect VGA webcam and writes the edited frame in the virtual webcam provided by v4l2loopback module.
